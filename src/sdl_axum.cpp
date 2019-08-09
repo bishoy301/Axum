@@ -2,10 +2,15 @@
 
 #define GL3_PROTOTYPES 1
 #include <GL/glew.h>
+#include "shader.cpp"
+
+int WIDTH = 800;
+int HEIGHT = 600;
 
 bool init();
 bool set_opengl_attributes();
 bool handle_event(SDL_Event *event);
+bool init_gl();
 void cleanup();
 
 bool init()
@@ -20,8 +25,8 @@ bool init()
     window = SDL_CreateWindow("Axum",
                               SDL_WINDOWPOS_UNDEFINED,
                               SDL_WINDOWPOS_UNDEFINED,
-                              1920,
-                              1080,
+                              WIDTH,
+                              HEIGHT,
                               SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
     SDL_GLContext gl = SDL_GL_CreateContext(window);
@@ -43,12 +48,16 @@ bool set_opengl_attributes()
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     return true;
 }
 
+bool init_gl()
+{
+    return true;
+}
 bool handle_event(SDL_Event *event)
 {
     bool should_quit = false;
@@ -103,6 +112,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    load_shader("./shaders/vertex.vert", "./shaders/fragment.frag");
     while (true)
     {
         SDL_Event event;
