@@ -1,14 +1,112 @@
 #include <SDL2/SDL.h>
+#include <stdlib.h>
+#include <stdint.h>
 
-#define GL3_PROTOTYPES 1
-#include <GL/glew.h>
+#define global_variable static
+#define internal static
+#define local_persist static
 
-bool init();
-bool set_opengl_attributes();
+typedef int8_t i8;
+typedef int16_t i16;
+typedef int32_t i32;
+typedef int64_t i64;
+
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
+
+global_variable SDL_Texture *texture;
+global_variable void *bitmap_memory;
+global_variable int bitmap_width;
+global_variable int bitmap_height;
+global_variable int bytes_per_pixel;
+
 bool handle_event(SDL_Event *event);
+internal void SDL_resize_texture(SDL_Renderer *renderer, int width, int height);
+internal void SDL_update_window(SDL_Window *window, SDL_Renderer *renderer);
 void cleanup();
 
-bool init()
+bool handle_event(SDL_Event *event)
+{
+    bool should_quit = false;
+    SDL_Window *window = SDL_GetWindowFromID(event->window.windowID);
+    SDL_Renderer *renderer = SDL_GetRenderer(window);
+    switch (event->type)
+    {
+    case SDL_QUIT:
+        printf("SDL_QUIT\n");
+        should_quit = true;
+        break;
+    case SDL_WINDOWEVENT:
+        switch (event->window.event)
+        {
+        case SDL_WINDOWEVENT_SIZE_CHANGED:
+            SDL_resize_texture(renderer, event->window.data1, event->window.data2);
+            break;
+        case SDL_WINDOWEVENT_FOCUS_GAINED:
+            printf("Focus gained\n");
+            break;
+        case SDL_WINDOWEVENT_EXPOSED:
+            SDL_update_window(window, renderer);
+            break;
+        }
+    case SDL_KEYDOWN:
+        switch (event->key.keysym.sym)
+        {
+        case SDLK_ESCAPE:
+            should_quit = true;
+        case SDLK_r:
+            break;
+        case SDLK_g:
+            break;
+        case SDLK_b:
+            break;
+        }
+    }
+    return should_quit;
+}
+
+internal void SDL_resize_texture(SDL_Renderer *renderer, int width, int height)
+{
+    if (bitmap_memory)
+    {
+        free(bitmap_memory);
+    }
+    if (texture)
+    {
+        SDL_DestroyTexture(texture);
+    }
+
+    texture = SDL_CreateTexture(renderer,
+                                SDL_PIXELFORMAT_ARGB8888,
+                                SDL_TEXTUREACCESS_STREAMING,
+                                width,
+                                height);
+    bitmap_width = width;
+    bitmap_height = height;
+    bitmap_memory = malloc(bitmap_width * bitmap_height * bytes_per_pixel);
+}
+
+internal void SDL_update_window(SDL_Window *window, SDL_Renderer *renderer)
+{
+    SDL_UpdateTexture(texture,
+                      0,
+                      bitmap_memory,
+                      bitmap_width * bytes_per_pixel);
+    SDL_RenderCopy(renderer,
+                   texture,
+                   0,
+                   0);
+    SDL_RenderPresent(renderer);
+}
+
+void cleanup()
+{
+    SDL_Quit();
+}
+
+int main(int argc, char *argv[])
 {
     if (SDL_Init(SDL_INIT_VIDEO) != 0)
     {
@@ -22,95 +120,35 @@ bool init()
                               SDL_WINDOWPOS_UNDEFINED,
                               1920,
                               1080,
-                              SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-
-    SDL_GLContext gl = SDL_GL_CreateContext(window);
-
-    set_opengl_attributes();
-
-    SDL_GL_GetSwapInterval();
-
-#ifndef __APPLE__
-    glewExperimental = GL_TRUE;
-    glewInit();
-#endif
-
-    return true;
-}
-
-bool set_opengl_attributes()
-{
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
-
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    return true;
-}
-
-bool handle_event(SDL_Event *event)
-{
-    bool should_quit = false;
-    SDL_Window *window = SDL_GetWindowFromID(event->window.windowID);
-    switch (event->type)
+                              SDL_WINDOW_MAXIMIZED | SDL_WINDOW_RESIZABLE);
+    if (window)
     {
-    case SDL_QUIT:
-        printf("SDL_QUIT\n");
-        should_quit = true;
-        break;
-    case SDL_WINDOWEVENT:
-        switch (event->window.event)
+        SDL_Renderer *renderer = SDL_CreateRenderer(window,
+                                                    -1,
+                                                    0);
+        if (renderer)
         {
-        case SDL_WINDOWEVENT_RESIZED:
-            printf("SDL_WINDOWEVENT_RESIZED (%d, %d)\n", event->window.data1, event->window.data2);
-            break;
+            bool running = true;
+            int width, height;
+            SDL_GetWindowSize(window, &width, &height);
+            while (true)
+            {
+                SDL_Event event;
+                SDL_WaitEvent(&event);
+                if (handle_event(&event))
+                {
+                    break;
+                }
+            }
         }
-    case SDL_KEYDOWN:
-        switch (event->key.keysym.sym)
+        else
         {
-        case SDLK_ESCAPE:
-            should_quit = true;
-        case SDLK_r:
-            glClearColor(1.0, 0.0, 0.0, 1.0);
-            glClear(GL_COLOR_BUFFER_BIT);
-            SDL_GL_SwapWindow(window);
-            break;
-        case SDLK_g:
-            glClearColor(0.0, 1.0, 0.0, 1.0);
-            glClear(GL_COLOR_BUFFER_BIT);
-            SDL_GL_SwapWindow(window);
-            break;
-        case SDLK_b:
-            glClearColor(0.0, 0.0, 1.0, 1.0);
-            glClear(GL_COLOR_BUFFER_BIT);
-            SDL_GL_SwapWindow(window);
-            break;
+            // TODO: Logging
         }
     }
-    return should_quit;
-}
-
-void cleanup()
-{
-    SDL_Quit();
-}
-
-int main(int argc, char *argv[])
-{
-    if (!init())
+    else
     {
-        return -1;
-    }
-
-    while (true)
-    {
-        SDL_Event event;
-        SDL_WaitEvent(&event);
-        if (handle_event(&event))
-        {
-            break;
-        }
+        // TODO: Logging
     }
 
     cleanup();
