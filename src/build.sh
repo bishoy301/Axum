@@ -2,5 +2,5 @@
 
 mkdir -p ../build
 pushd ../build
-c++ ../src/sdl_handmade.cpp -o Axum -g `sdl2-config --cflags --libs`
+c++ ../src/sdl_axum.cpp -o Axum -g `sdl2-config --cflags --libs`
 popd
