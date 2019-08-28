@@ -39,6 +39,10 @@ struct sdl_window_dimension
 
 global_variable sdl_offscreen_buffer GlobalBackbuffer;
 
+#define MAX_CONTROLLERS 4
+SDL_GameController *ControllerHandles[MAX_CONTROLLERS];
+SDL_Haptic *RumbleHandles[MAX_CONTROLLERS];
+
 sdl_window_dimension
 SDLGetWindowDimension(SDL_Window *Window)
 {
@@ -173,6 +177,33 @@ bool HandleEvent(SDL_Event *Event)
     }
 
     return (ShouldQuit);
+}
+
+internal void
+SDLOpenGameControllers()
+{
+    int MaxJoysticks = SDL_NumJoysticks();
+    int ControllerIndex = 0;
+    for (int JoystickIndex = 0; JoystickIndex < MaxJoysticks; ++JoystickIndex)
+    {
+        if (!SDL_IsGameController(JoystickIndex))
+        {
+            continue;
+        }
+        if (ControllerIndex >= MAX_CONTROLLERS)
+        {
+            break;
+        }
+        ControllerHandles[ControllerIndex] = SDL_GameControllerOpen(JoystickIndex);
+        RumbleHandles[ControllerIndex] = SDL_HapticOpen(JoystickIndex);
+        if (RumbleHandles[ControllerIndex] && SDL_HapticRumbleInit(RumbleHandles[ControllerIndex]) != 0)
+        {
+            SDL_HapticClose(RumbleHandles[ControllerIndex]);
+            RumbleHandles[ControllerIndex] = 0;
+        }
+
+        ControllerIndex++;
+    }
 }
 
 int main(int argc, char *argv[])
