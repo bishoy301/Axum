@@ -177,7 +177,7 @@ bool HandleEvent(SDL_Event *Event)
 
 int main(int argc, char *argv[])
 {
-    SDL_Init(SDL_INIT_VIDEO);
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER);
     // Create our window.
     SDL_Window *Window = SDL_CreateWindow("Axum",
                                           SDL_WINDOWPOS_UNDEFINED,
