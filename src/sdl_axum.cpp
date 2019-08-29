@@ -163,7 +163,20 @@ bool HandleEvent(SDL_Event *Event)
     }
     break;
     case SDL_KEYDOWN:
+    case SDL_KEYUP:
     {
+        SDL_Keycode KeyCode = Event->key.keysym.sym;
+        bool IsDown = (Event->key.state == SDL_PRESSED);
+        bool WasDown = false;
+        if (Event->key.state == SDL_RELEASED)
+        {
+            WasDown = true;
+        }
+        else if (Event->key.repeat != 0)
+        {
+            WasDown = true;
+        }
+
         switch (Event->key.keysym.sym)
         {
         case SDLK_ESCAPE:
@@ -206,9 +219,27 @@ SDLOpenGameControllers()
     }
 }
 
+internal void
+SDLCloseGameControllers()
+{
+    for (int ControllerIndex = 0; ControllerIndex < MAX_CONTROLLERS; ++ControllerIndex)
+    {
+        if (ControllerHandles[ControllerIndex])
+        {
+            if (RumbleHandles[ControllerIndex])
+            {
+                SDL_HapticClose(RumbleHandles[ControllerIndex]);
+            }
+            SDL_GameControllerClose(ControllerHandles[ControllerIndex]);
+        }
+    }
+}
+
 int main(int argc, char *argv[])
 {
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER);
+
+    SDLOpenGameControllers();
     // Create our window.
     SDL_Window *Window = SDL_CreateWindow("Axum",
                                           SDL_WINDOWPOS_UNDEFINED,
@@ -239,11 +270,52 @@ int main(int argc, char *argv[])
                         Running = false;
                     }
                 }
+
+                for (int ControllerIndex = 0;
+                     ControllerIndex < MAX_CONTROLLERS;
+                     ++ControllerIndex)
+                {
+                    if (ControllerHandles[ControllerIndex] != 0 && SDL_GameControllerGetAttached(ControllerHandles[ControllerIndex]))
+                    {
+                        //NOTE: We have a controller with index ControllerIndex
+                        bool Up = SDL_GameControllerGetButton(ControllerHandles[ControllerIndex], SDL_CONTROLLER_BUTTON_DPAD_UP);
+                        bool Down = SDL_GameControllerGetButton(ControllerHandles[ControllerIndex], SDL_CONTROLLER_BUTTON_DPAD_DOWN);
+                        bool Left = SDL_GameControllerGetButton(ControllerHandles[ControllerIndex], SDL_CONTROLLER_BUTTON_DPAD_LEFT);
+                        bool Right = SDL_GameControllerGetButton(ControllerHandles[ControllerIndex], SDL_CONTROLLER_BUTTON_DPAD_RIGHT);
+                        bool Start = SDL_GameControllerGetButton(ControllerHandles[ControllerIndex], SDL_CONTROLLER_BUTTON_START);
+                        bool Back = SDL_GameControllerGetButton(ControllerHandles[ControllerIndex], SDL_CONTROLLER_BUTTON_BACK);
+                        bool LeftShoulder = SDL_GameControllerGetButton(ControllerHandles[ControllerIndex], SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
+                        bool RightShoulder = SDL_GameControllerGetButton(ControllerHandles[ControllerIndex], SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
+                        bool AButton = SDL_GameControllerGetButton(ControllerHandles[ControllerIndex], SDL_CONTROLLER_BUTTON_A);
+                        bool BButton = SDL_GameControllerGetButton(ControllerHandles[ControllerIndex], SDL_CONTROLLER_BUTTON_B);
+                        bool XButton = SDL_GameControllerGetButton(ControllerHandles[ControllerIndex], SDL_CONTROLLER_BUTTON_X);
+                        bool YButton = SDL_GameControllerGetButton(ControllerHandles[ControllerIndex], SDL_CONTROLLER_BUTTON_Y);
+
+                        i16 StickX = SDL_GameControllerGetAxis(ControllerHandles[ControllerIndex], SDL_CONTROLLER_AXIS_LEFTX);
+                        i16 StickY = SDL_GameControllerGetAxis(ControllerHandles[ControllerIndex], SDL_CONTROLLER_AXIS_LEFTY);
+
+                        if (AButton)
+                        {
+                            YOffset += 2;
+                        }
+                        if (BButton)
+                        {
+                            if (RumbleHandles[ControllerIndex])
+                            {
+                                SDL_HapticRumblePlay(RumbleHandles[ControllerIndex], 0.5f, 2000);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // TODO: This controller is not plugged in
+                    }
+                }
+
                 RenderWeirdGradient(GlobalBackbuffer, XOffset, YOffset);
                 SDLUpdateWindow(Window, Renderer, GlobalBackbuffer);
 
                 ++XOffset;
-                YOffset += 2;
             }
         }
         else
